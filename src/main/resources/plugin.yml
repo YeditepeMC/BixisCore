@@ -4,6 +4,7 @@ version: 1.0.0
 api-version: '1.21'
 authors: [iBerkS]
 description: YeditepeMC ağı için merkezi veri ve API kütüphanesi.
+softdepend: [Vault]
 
 # NOT: Aşağıdaki komut GEÇİCİDİR — sürüm öncesi kaldırılacak (bkz. CLAUDE.md > Test Komutları)
 commands:

@@ -72,7 +72,6 @@ public class PlayerDataManager implements Listener {
                 return new PlayerData(
                         uuid,
                         rs.getString("username"),
-                        rs.getLong("coin"),
                         rs.getLong("xp"),
                         rs.getInt("streak_days"),
                         parse(rs.getString("last_daily")),
@@ -102,7 +101,6 @@ public class PlayerDataManager implements Listener {
                 upsertSql(),
                 data.getUuid().toString(),
                 data.getUsername(),
-                data.getCoin(),
                 data.getXp(),
                 data.getStreakDays(),
                 format(data.getLastDaily()),
@@ -122,7 +120,6 @@ public class PlayerDataManager implements Listener {
                         upsertSql(),
                         data.getUuid().toString(),
                         data.getUsername(),
-                        data.getCoin(),
                         data.getXp(),
                         data.getStreakDays(),
                         format(data.getLastDaily()),
@@ -143,19 +140,19 @@ public class PlayerDataManager implements Listener {
     private String upsertSql() {
         if (database.isMySQL()) {
             return "INSERT INTO players " +
-                   "(uuid, username, coin, xp, streak_days, last_daily, last_weekly, last_monthly) " +
-                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+                   "(uuid, username, xp, streak_days, last_daily, last_weekly, last_monthly) " +
+                   "VALUES (?, ?, ?, ?, ?, ?, ?) " +
                    "ON DUPLICATE KEY UPDATE " +
-                   "username = VALUES(username), coin = VALUES(coin), xp = VALUES(xp), " +
+                   "username = VALUES(username), xp = VALUES(xp), " +
                    "streak_days = VALUES(streak_days), last_daily = VALUES(last_daily), " +
                    "last_weekly = VALUES(last_weekly), last_monthly = VALUES(last_monthly)";
         }
         // SQLite
         return "INSERT INTO players " +
-               "(uuid, username, coin, xp, streak_days, last_daily, last_weekly, last_monthly) " +
-               "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+               "(uuid, username, xp, streak_days, last_daily, last_weekly, last_monthly) " +
+               "VALUES (?, ?, ?, ?, ?, ?, ?) " +
                "ON CONFLICT(uuid) DO UPDATE SET " +
-               "username = excluded.username, coin = excluded.coin, xp = excluded.xp, " +
+               "username = excluded.username, xp = excluded.xp, " +
                "streak_days = excluded.streak_days, last_daily = excluded.last_daily, " +
                "last_weekly = excluded.last_weekly, last_monthly = excluded.last_monthly";
     }

@@ -4,6 +4,8 @@ import com.yeditepemc.bixiscore.BixisCorePlugin;
 import com.yeditepemc.bixiscore.event.LevelUpEvent;
 import com.yeditepemc.bixiscore.manager.PlayerDataManager;
 import com.yeditepemc.bixiscore.model.PlayerData;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -79,54 +81,66 @@ public class BixisCoreAPI {
     }
 
     // ------------------------------------------------------------------
-    //  Coin (ekonomi)
+    //  Coin (ekonomi) — Vault üzerinden, evrensel (CLAUDE.md — Ekonomi)
     // ------------------------------------------------------------------
 
     /**
-     * Oyuncunun hesabına coin ekler.
+     * Oyuncunun hesabına coin ekler (Vault deposit).
+     *
+     * @return işlem başarılıysa {@code true}; ekonomi yoksa/hata olursa {@code false}
      */
     public boolean addCoins(Player player, long amount) {
         if (amount <= 0) {
             return false;
         }
-        PlayerData data = getPlayerData(player);
-        if (data == null) {
+        Economy economy = BixisCorePlugin.getEconomy();
+        if (economy == null) {
+            player.sendMessage("§cEkonomi sistemi şu anda kullanılamıyor.");
             return false;
         }
-        data.setCoin(data.getCoin() + amount);
-        dataManager.savePlayer(data);
+        EconomyResponse response = economy.depositPlayer(player, amount);
+        if (!response.transactionSuccess()) {
+            player.sendMessage("§cCoin eklenirken bir hata oluştu.");
+            return false;
+        }
         player.sendMessage("§a+§e" + amount + " coin §ahesabına eklendi!");
         return true;
     }
 
     /**
-     * Oyuncudan coin siler. Yeterli coin yoksa işlem yapılmaz ve {@code false} döner.
+     * Oyuncudan coin siler (Vault withdraw). Yeterli coin yoksa işlem yapılmaz.
+     *
+     * @return işlem başarılıysa {@code true}; bakiye yetersizse/hata olursa {@code false}
      */
     public boolean removeCoins(Player player, long amount) {
         if (amount <= 0) {
             return false;
         }
-        PlayerData data = getPlayerData(player);
-        if (data == null) {
+        Economy economy = BixisCorePlugin.getEconomy();
+        if (economy == null) {
+            player.sendMessage("§cEkonomi sistemi şu anda kullanılamıyor.");
             return false;
         }
-        if (data.getCoin() < amount) {
+        if (!economy.has(player, amount)) {
             player.sendMessage("§cYeterli coinin yok! §7(Gerekli: §e" + amount
-                    + "§7, Mevcut: §e" + data.getCoin() + "§7)");
+                    + "§7, Mevcut: §e" + (long) economy.getBalance(player) + "§7)");
             return false;
         }
-        data.setCoin(data.getCoin() - amount);
-        dataManager.savePlayer(data);
+        EconomyResponse response = economy.withdrawPlayer(player, amount);
+        if (!response.transactionSuccess()) {
+            player.sendMessage("§cCoin düşülürken bir hata oluştu.");
+            return false;
+        }
         player.sendMessage("§c-§e" + amount + " coin §chesabından düşüldü.");
         return true;
     }
 
     /**
-     * Oyuncunun mevcut coin bakiyesi. Veri yüklü değilse {@code 0} döner.
+     * Oyuncunun mevcut coin bakiyesi (Vault). Ekonomi yoksa {@code 0} döner.
      */
     public long getCoins(Player player) {
-        PlayerData data = getPlayerData(player);
-        return data == null ? 0L : data.getCoin();
+        Economy economy = BixisCorePlugin.getEconomy();
+        return economy == null ? 0L : (long) economy.getBalance(player);
     }
 
     // ------------------------------------------------------------------

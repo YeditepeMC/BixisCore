@@ -5,12 +5,14 @@ import com.yeditepemc.bixiscore.database.DatabaseManager;
 import com.yeditepemc.bixiscore.event.LevelUpEvent;
 import com.yeditepemc.bixiscore.manager.PlayerDataManager;
 import com.yeditepemc.bixiscore.model.PlayerData;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 public final class BixisCorePlugin extends JavaPlugin implements Listener {
 
     private static BixisCorePlugin instance;
+    private static Economy economy;
 
     private DatabaseManager databaseManager;
     private PlayerDataManager playerDataManager;
@@ -43,10 +46,17 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         // 2) Managerler (singleton)
         this.playerDataManager = new PlayerDataManager(this, databaseManager);
 
-        // 3) Public API
+        // 3) Vault ekonomi bağlantısı (softdepend — yoksa coin işlemleri devre dışı)
+        if (setupEconomy()) {
+            getLogger().info("Vault ekonomisine bağlanıldı: " + economy.getName());
+        } else {
+            getLogger().warning("Vault veya bir ekonomi eklentisi bulunamadı! Coin işlemleri devre dışı.");
+        }
+
+        // 4) Public API
         this.api = new BixisCoreAPI(this, playerDataManager);
 
-        // 4) Event dinleyicileri
+        // 5) Event dinleyicileri
         getServer().getPluginManager().registerEvents(playerDataManager, this);
         getServer().getPluginManager().registerEvents(this, this); // LevelUpEvent (aşağıda)
 
@@ -68,7 +78,32 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
             databaseManager.disconnect();
         }
         getLogger().info("BixisCore devre dışı bırakıldı.");
+        economy = null;
         instance = null;
+    }
+
+    /**
+     * Vault üzerinden kayıtlı Economy sağlayıcısını bulur.
+     *
+     * @return bağlanıldıysa {@code true}
+     */
+    private boolean setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return false;
+        }
+        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            return false;
+        }
+        economy = rsp.getProvider();
+        return economy != null;
+    }
+
+    /**
+     * Vault Economy sağlayıcısı. Vault yoksa {@code null} döner.
+     */
+    public static Economy getEconomy() {
+        return economy;
     }
 
     /**
@@ -152,8 +187,11 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
             player.sendMessage("§cVerin henüz yüklenmedi, birazdan tekrar dene.");
             return;
         }
+        String coinStr = economy != null
+                ? String.valueOf((long) economy.getBalance(player))
+                : "§8(Vault yok)";
         player.sendMessage("§6§l» BixisCore Bilgilerin");
-        player.sendMessage("§7Coin: §e" + data.getCoin());
+        player.sendMessage("§7Coin: §e" + coinStr);
         player.sendMessage("§7XP: §e" + data.getXp()
                 + " §7(sonraki seviyeye §e" + data.getXpToNextLevel() + " §7XP)");
         player.sendMessage("§7Seviye: §e" + data.getLevel() + "§7/§e" + PlayerData.MAX_LEVEL);
@@ -182,13 +220,20 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
             player.sendMessage("§cVerin henüz yüklenmedi, birazdan tekrar dene.");
             return;
         }
-        data.setCoin(0);
         data.setXp(0);
         data.setStreakDays(0);
         data.setLastDaily(null);
         data.setLastWeekly(null);
         data.setLastMonthly(null);
         playerDataManager.savePlayer(data);
+
+        // Coin artık Vault'ta — bakiyeyi sıfıra çek
+        if (economy != null) {
+            double balance = economy.getBalance(player);
+            if (balance > 0) {
+                economy.withdrawPlayer(player, balance);
+            }
+        }
         player.sendMessage("§aVerin sıfırlandı. §7(coin, xp, level, streak)");
     }
 

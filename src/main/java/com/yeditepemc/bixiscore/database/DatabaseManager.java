@@ -125,11 +125,11 @@ public class DatabaseManager {
      */
     public void createTables() {
         // level alanı saklanmaz — XP'den hesaplanır.
+        // coin alanı saklanmaz — Vault ekonomisinde tutulur.
         String sql =
                 "CREATE TABLE IF NOT EXISTS players (" +
                 "  uuid VARCHAR(36) PRIMARY KEY," +
                 "  username VARCHAR(16) NOT NULL," +
-                "  coin BIGINT NOT NULL DEFAULT 0," +
                 "  xp BIGINT NOT NULL DEFAULT 0," +
                 "  streak_days INT NOT NULL DEFAULT 0," +
                 "  last_daily VARCHAR(32)," +

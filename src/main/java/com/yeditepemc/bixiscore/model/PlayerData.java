@@ -16,7 +16,6 @@ public class PlayerData {
     private final UUID uuid;
     private String username;
 
-    private long coin;
     private long xp;
     private int level;
     private int streakDays;
@@ -29,17 +28,17 @@ public class PlayerData {
      * Yeni (veritabanında bulunmayan) bir oyuncu için varsayılan veri.
      */
     public PlayerData(UUID uuid, String username) {
-        this(uuid, username, 0L, 0L, 0, null, null, null);
+        this(uuid, username, 0L, 0, null, null, null);
     }
 
     /**
      * Veritabanından yüklenen tam veri.
+     * Not: coin artık burada tutulmaz — Vault ekonomisinden okunur.
      */
-    public PlayerData(UUID uuid, String username, long coin, long xp, int streakDays,
+    public PlayerData(UUID uuid, String username, long xp, int streakDays,
                       LocalDateTime lastDaily, LocalDateTime lastWeekly, LocalDateTime lastMonthly) {
         this.uuid = uuid;
         this.username = username;
-        this.coin = coin;
         this.xp = xp;
         this.streakDays = streakDays;
         this.lastDaily = lastDaily;
@@ -134,14 +133,6 @@ public class PlayerData {
 
     public void setUsername(String username) {
         this.username = username;
-    }
-
-    public long getCoin() {
-        return coin;
-    }
-
-    public void setCoin(long coin) {
-        this.coin = Math.max(0L, coin);
     }
 
     public long getXp() {
