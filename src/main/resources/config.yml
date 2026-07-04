@@ -3,9 +3,9 @@
 #  Kural: İngilizce key, Türkçe açıklama/value
 # ============================================================
 
-database:
-  # Kullanılacak veritabanı tipi: sqlite | mysql
-  # Şimdilik sqlite kullanılıyor. MySQL hazır olunca "mysql" yapılacak.
+storage:
+  # Kullanılacak depolama tipi: sqlite | mysql
+  # Varsayılan sqlite. MySQL'e geçmek için "mysql" yap ve aşağıyı doldur.
   type: sqlite
 
   # SQLite ayarları (varsayılan)
@@ -13,14 +13,14 @@ database:
     # Dosya, plugin klasörü içinde oluşturulur
     file: data.db
 
-  # MySQL ayarları (ileride doldurulacak — şimdilik boş bırakıldı)
+  # MySQL ayarları
   mysql:
-    host: ""
+    host: 127.0.0.1
     port: 3306
-    database: ""
-    username: ""
-    password: ""
+    database: bixiscore
+    username: root
+    password: ''
     # Bağlantı havuzu boyutu
     pool-size: 10
-    # Ek HikariCP bağlantı özellikleri
+    # SSL kullanılsın mı
     use-ssl: false

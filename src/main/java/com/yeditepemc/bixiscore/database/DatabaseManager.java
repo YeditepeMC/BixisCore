@@ -16,8 +16,8 @@ import java.util.logging.Level;
 
 /**
  * Veritabanı katmanı. HikariCP connection pool'u üzerinden çalışır.
- * Varsayılan olarak SQLite kullanır; config {@code database.type: mysql}
- * yapıldığında MySQL'e hazırdır.
+ * Varsayılan olarak SQLite kullanır; config {@code storage.type: mysql}
+ * yapıldığında MySQL'e geçer.
  *
  * <p>Tüm public query/update metotları asenkrondur ve ana thread'i bloke etmez
  * (CLAUDE.md — Async veritabanı operasyonları zorunlu).
@@ -53,23 +53,27 @@ public class DatabaseManager {
      */
     public void connect() {
         FileConfiguration config = plugin.getConfig();
-        String rawType = config.getString("database.type", "sqlite");
+        String rawType = config.getString("storage.type", "sqlite");
         this.type = "mysql".equalsIgnoreCase(rawType) ? Type.MYSQL : Type.SQLITE;
 
         HikariConfig hikari = new HikariConfig();
         hikari.setPoolName("BixisCore-Pool");
 
         if (type == Type.MYSQL) {
-            String host = config.getString("database.mysql.host", "localhost");
-            int port = config.getInt("database.mysql.port", 3306);
-            String database = config.getString("database.mysql.database", "bixiscore");
-            String username = config.getString("database.mysql.username", "root");
-            String password = config.getString("database.mysql.password", "");
-            int poolSize = config.getInt("database.mysql.pool-size", 10);
-            boolean useSsl = config.getBoolean("database.mysql.use-ssl", false);
+            String host = config.getString("storage.mysql.host", "127.0.0.1");
+            int port = config.getInt("storage.mysql.port", 3306);
+            String database = config.getString("storage.mysql.database", "bixiscore");
+            String username = config.getString("storage.mysql.username", "root");
+            String password = config.getString("storage.mysql.password", "");
+            int poolSize = config.getInt("storage.mysql.pool-size", 10);
+            boolean useSsl = config.getBoolean("storage.mysql.use-ssl", false);
 
+            // Sürücü sınıfını açıkça belirt — shade edilmiş mysql-connector-j'yi kullanır
+            hikari.setDriverClassName("com.mysql.cj.jdbc.Driver");
             hikari.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database
-                    + "?useSSL=" + useSsl + "&useUnicode=true&characterEncoding=UTF-8");
+                    + "?useSSL=" + useSsl
+                    + "&allowPublicKeyRetrieval=" + (!useSsl)
+                    + "&useUnicode=true&characterEncoding=UTF-8");
             hikari.setUsername(username);
             hikari.setPassword(password);
             hikari.setMaximumPoolSize(poolSize);
@@ -79,7 +83,7 @@ public class DatabaseManager {
             if (!dataFolder.exists() && !dataFolder.mkdirs()) {
                 plugin.getLogger().warning("Plugin klasörü oluşturulamadı: " + dataFolder.getAbsolutePath());
             }
-            String fileName = config.getString("database.sqlite.file", "data.db");
+            String fileName = config.getString("storage.sqlite.file", "data.db");
             File dbFile = new File(dataFolder, fileName);
 
             hikari.setDriverClassName("org.sqlite.JDBC");
@@ -126,16 +130,22 @@ public class DatabaseManager {
     public void createTables() {
         // level alanı saklanmaz — XP'den hesaplanır.
         // coin alanı saklanmaz — Vault ekonomisinde tutulur.
-        String sql =
-                "CREATE TABLE IF NOT EXISTS players (" +
+        // Not: players tablosunda AUTO_INCREMENT sütun yok (PK = uuid), bu yüzden
+        //      SQLite/MySQL arasında çevrilecek AUTOINCREMENT ifadesi bulunmaz.
+        //      Sütun tipleri (VARCHAR/BIGINT/INT) her iki motorda da geçerlidir.
+        String columns =
                 "  uuid VARCHAR(36) PRIMARY KEY," +
                 "  username VARCHAR(16) NOT NULL," +
                 "  xp BIGINT NOT NULL DEFAULT 0," +
                 "  streak_days INT NOT NULL DEFAULT 0," +
                 "  last_daily VARCHAR(32)," +
                 "  last_weekly VARCHAR(32)," +
-                "  last_monthly VARCHAR(32)" +
-                ")";
+                "  last_monthly VARCHAR(32)";
+
+        // MySQL için motor + utf8mb4; SQLite'ta tablo son eki kullanılmaz.
+        String suffix = isMySQL() ? " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4" : "";
+        String sql = "CREATE TABLE IF NOT EXISTS players (" + columns + ")" + suffix;
+
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.executeUpdate();

@@ -5,6 +5,7 @@ import com.yeditepemc.bixiscore.database.DatabaseManager;
 import com.yeditepemc.bixiscore.event.LevelUpEvent;
 import com.yeditepemc.bixiscore.manager.PlayerDataManager;
 import com.yeditepemc.bixiscore.model.PlayerData;
+import com.yeditepemc.bixiscore.placeholder.BixisCorePlaceholders;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
@@ -59,6 +60,12 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         // 5) Event dinleyicileri
         getServer().getPluginManager().registerEvents(playerDataManager, this);
         getServer().getPluginManager().registerEvents(this, this); // LevelUpEvent (aşağıda)
+
+        // 6) PlaceholderAPI entegrasyonu (softdepend — varsa placeholder'ları kaydet)
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new BixisCorePlaceholders(this).register();
+            getLogger().info("PlaceholderAPI bulundu, placeholder'lar kaydedildi (%bixiscore_...%).");
+        }
 
         // Sunucu yeniden yüklendiyse (reload) zaten online olan oyuncuları yükle
         getServer().getOnlinePlayers().forEach(p ->
