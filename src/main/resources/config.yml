@@ -24,3 +24,32 @@ storage:
     pool-size: 10
     # SSL kullanılsın mı
     use-ssl: false
+
+# ============================================================
+#  Level ödülleri (/level GUI'si)
+# ============================================================
+level-rewards:
+  # Normal level: coin = level * coin-per-level
+  coin-per-level: 50
+  # Milestone level (10/20/30/40/50): coin = level * milestone-coin-per-level
+  milestone-coin-per-level: 100
+
+  # Kasa teslim komutları (konsoldan çalışır). {player} = oyuncu adı.
+  # Ağda kasa eklentisi kurulunca doldur; boş bırakılırsa teslim atlanır.
+  # Kademeler: 5,15→1★ · 25,35,45→2★ · 10,20→3★ · 30,40→4★ · 50→5★
+  crate-commands:
+    '1': ''
+    '2': ''
+    '3': ''
+    '4': ''
+    '5': ''
+
+  # Level 50 özel unvan/rozet — LuckPerms üzerinden. {player} = oyuncu adı.
+  level50-title-command: 'lp user {player} permission set bixiscore.title.level50 true'
+
+# /level ana ekranındaki "XP nasıl kazanılır" özeti (yönlendirici, kısa).
+xp-info:
+  - '&7XP kazanmanın yolları:'
+  - '&f• &7Achievement'
+  - '&f• &7Günlük & haftalık ödüller'
+  - '&f• &7Etkinlikler ve görevler'

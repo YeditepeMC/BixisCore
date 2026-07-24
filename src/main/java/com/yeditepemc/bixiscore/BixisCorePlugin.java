@@ -1,15 +1,22 @@
 package com.yeditepemc.bixiscore;
 
 import com.yeditepemc.bixiscore.api.BixisCoreAPI;
+import com.yeditepemc.bixiscore.command.LevelCommand;
 import com.yeditepemc.bixiscore.database.DatabaseManager;
 import com.yeditepemc.bixiscore.event.LevelUpEvent;
+import com.yeditepemc.bixiscore.gui.LevelMenu;
+import com.yeditepemc.bixiscore.gui.LevelMenuListener;
+import com.yeditepemc.bixiscore.manager.LeaderboardManager;
 import com.yeditepemc.bixiscore.manager.PlayerDataManager;
 import com.yeditepemc.bixiscore.model.PlayerData;
 import com.yeditepemc.bixiscore.placeholder.BixisCorePlaceholders;
+import com.yeditepemc.bixiscore.reward.LevelRewards;
+import com.yeditepemc.bixiscore.reward.RewardQueueManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -32,6 +39,12 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
     private DatabaseManager databaseManager;
     private PlayerDataManager playerDataManager;
     private BixisCoreAPI api;
+
+    // Level GUI / ödül sistemi
+    private LevelRewards levelRewards;
+    private RewardQueueManager rewardQueueManager;
+    private LeaderboardManager leaderboardManager;
+    private LevelMenu levelMenu;
 
     @Override
     public void onEnable() {
@@ -74,9 +87,24 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
             getLogger().info("PlaceholderAPI bulundu, placeholder'lar kaydedildi (%bixiscore_...%).");
         }
 
+        // 7) Level ödül sistemi + /level GUI
+        this.levelRewards = new LevelRewards(this);
+        this.rewardQueueManager = new RewardQueueManager(this, databaseManager, levelRewards);
+        this.leaderboardManager = new LeaderboardManager(this, databaseManager);
+        this.levelMenu = new LevelMenu(this, levelRewards, rewardQueueManager, leaderboardManager);
+        getServer().getPluginManager().registerEvents(rewardQueueManager, this);
+        getServer().getPluginManager().registerEvents(
+                new LevelMenuListener(this, levelMenu, rewardQueueManager, levelRewards), this);
+        PluginCommand levelCmd = getCommand("level");
+        if (levelCmd != null) {
+            levelCmd.setExecutor(new LevelCommand(levelMenu));
+        }
+
         // Sunucu yeniden yüklendiyse (reload) zaten online olan oyuncuları yükle
-        getServer().getOnlinePlayers().forEach(p ->
-                playerDataManager.loadPlayer(p.getUniqueId(), p.getName()));
+        getServer().getOnlinePlayers().forEach(p -> {
+            playerDataManager.loadPlayer(p.getUniqueId(), p.getName());
+            rewardQueueManager.loadClaimed(p.getUniqueId());
+        });
 
         getLogger().info("BixisCore etkinleştirildi. (v" + getPluginMeta().getVersion() + ")");
     }

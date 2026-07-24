@@ -13,14 +13,21 @@ libraries:
   - org.xerial:sqlite-jdbc:3.46.1.3
   - com.mysql:mysql-connector-j:8.3.0
 
-# NOT: Aşağıdaki komut GEÇİCİDİR — sürüm öncesi kaldırılacak (bkz. CLAUDE.md > Test Komutları)
 commands:
+  level:
+    description: Level ilerleme ve ödül GUI'sini açar
+    usage: /level
+    permission: bixiscore.level
+  # NOT: Aşağıdaki komut GEÇİCİDİR — sürüm öncesi kaldırılacak (bkz. CLAUDE.md > Test Komutları)
   bixiscore:
     description: BixisCore geçici test komutu
     usage: /bixiscore <info|addxp|addcoin|reset>
     permission: bixiscore.admin
 
 permissions:
+  bixiscore.level:
+    description: /level komutunu kullanma izni
+    default: true
   bixiscore.admin:
     description: BixisCore test komutlarını kullanma izni
     default: op

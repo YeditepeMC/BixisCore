@@ -144,11 +144,25 @@ public class DatabaseManager {
 
         // MySQL için motor + utf8mb4; SQLite'ta tablo son eki kullanılmaz.
         String suffix = isMySQL() ? " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4" : "";
-        String sql = "CREATE TABLE IF NOT EXISTS players (" + columns + ")" + suffix;
+        String playersSql = "CREATE TABLE IF NOT EXISTS players (" + columns + ")" + suffix;
+
+        // Level ödül kuyruğu — BixisCore'a özel, tip-farkında (SQLite + MySQL).
+        // status ileride sunucular-arası gecikmeli teslim için ayrılmıştır.
+        String queueSql =
+                "CREATE TABLE IF NOT EXISTS bixiscore_level_reward_queue (" +
+                "  uuid VARCHAR(36) NOT NULL," +
+                "  level INT NOT NULL," +
+                "  status VARCHAR(16) NOT NULL DEFAULT 'PENDING'," +
+                "  created_at VARCHAR(32)," +
+                "  delivered_at VARCHAR(32)," +
+                "  PRIMARY KEY (uuid, level)" +
+                ")" + suffix;
 
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.executeUpdate();
+             PreparedStatement ps1 = conn.prepareStatement(playersSql);
+             PreparedStatement ps2 = conn.prepareStatement(queueSql)) {
+            ps1.executeUpdate();
+            ps2.executeUpdate();
             plugin.getLogger().info("Veritabanı tabloları hazır.");
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Tablolar oluşturulamadı!", e);
