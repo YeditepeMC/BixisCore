@@ -186,7 +186,10 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
     }
 
     // ==================================================================
-    //  GEÇİCİ TEST KOMUTU — sürüm öncesi kaldırılacak (bkz. CLAUDE.md)
+    //  /bixiscore komutu
+    //  NOT: info/addcoin/reset alt komutları GEÇİCİ TEST amaçlıdır ve sürüm
+    //  öncesi kaldırılacaktır. Ancak "addxp <oyuncu> <miktar>" KALICIDIR —
+    //  SkyWarsReloaded konsoldan XP ödülü için bunu çağırır (bkz. CLAUDE.md).
     // ==================================================================
 
     @Override
@@ -195,19 +198,28 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         if (!command.getName().equalsIgnoreCase("bixiscore")) {
             return false;
         }
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cBu komut yalnızca oyuncular tarafından kullanılabilir.");
-            return true;
-        }
 
         if (args.length == 0) {
-            sendUsage(player);
+            sendUsage(sender);
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
+        String sub = args[0].toLowerCase();
+
+        // addxp konsoldan da çalışır: /bixiscore addxp <oyuncu> <miktar>
+        if (sub.equals("addxp")) {
+            handleAddXp(sender, args);
+            return true;
+        }
+
+        // Diğer (geçici test) alt komutları yalnızca oyuncu kendisi için kullanır
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cBu alt komut yalnızca oyunculara özeldir. "
+                    + "Konsoldan: §e/bixiscore addxp <oyuncu> <miktar>");
+            return true;
+        }
+        switch (sub) {
             case "info" -> handleInfo(player);
-            case "addxp" -> handleAddXp(player, args);
             case "addcoin" -> handleAddCoin(player, args);
             case "reset" -> handleReset(player);
             default -> sendUsage(player);
@@ -215,12 +227,14 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         return true;
     }
 
-    private void sendUsage(Player player) {
-        player.sendMessage("§6BixisCore §7(geçici test komutu):");
-        player.sendMessage("§e/bixiscore info §7- coin, xp, level, streak bilgin");
-        player.sendMessage("§e/bixiscore addxp <miktar> §7- kendine XP ekle");
-        player.sendMessage("§e/bixiscore addcoin <miktar> §7- kendine coin ekle");
-        player.sendMessage("§e/bixiscore reset §7- verini sıfırla");
+    private void sendUsage(CommandSender sender) {
+        sender.sendMessage("§6BixisCore komutları:");
+        sender.sendMessage("§e/bixiscore addxp <oyuncu> <miktar> §7- oyuncuya XP ekle (konsol/admin)");
+        sender.sendMessage("§8— geçici test alt komutları (oyuncu) —");
+        sender.sendMessage("§e/bixiscore info §7- coin, xp, level, streak bilgin");
+        sender.sendMessage("§e/bixiscore addxp <miktar> §7- kendine XP ekle");
+        sender.sendMessage("§e/bixiscore addcoin <miktar> §7- kendine coin ekle");
+        sender.sendMessage("§e/bixiscore reset §7- verini sıfırla");
     }
 
     private void handleInfo(Player player) {
@@ -240,16 +254,61 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         player.sendMessage("§7Streak: §e" + data.getStreakDays() + " §7gün");
     }
 
-    private void handleAddXp(Player player, String[] args) {
-        Long amount = parseAmount(player, args);
+    /**
+     * İki biçimi destekler:
+     * <ul>
+     *   <li>{@code /bixiscore addxp <miktar>} — gönderen oyuncu kendine ekler</li>
+     *   <li>{@code /bixiscore addxp <oyuncu> <miktar>} — konsol/admin, hedefe ekler
+     *       (SkyWarsReloaded winCommands/killCommands buradan tetikler)</li>
+     * </ul>
+     */
+    private void handleAddXp(CommandSender sender, String[] args) {
+        Player target;
+        Long amount;
+
+        if (args.length >= 3) {
+            // Hedefli biçim — konsoldan çalışır
+            target = getServer().getPlayerExact(args[1]);
+            if (target == null) {
+                sender.sendMessage("§cOyuncu bulunamadı ya da çevrimiçi değil: §e" + args[1]);
+                return;
+            }
+            amount = parseAmount(sender, args[2]);
+        } else if (args.length == 2) {
+            // Kendine ekleme — yalnızca oyuncu
+            if (!(sender instanceof Player self)) {
+                sender.sendMessage("§cKonsoldan kullanım: §e/bixiscore addxp <oyuncu> <miktar>");
+                return;
+            }
+            target = self;
+            amount = parseAmount(sender, args[1]);
+        } else {
+            sender.sendMessage("§cKullanım: §e/bixiscore addxp <oyuncu> <miktar>");
+            return;
+        }
+
         if (amount == null) {
             return;
         }
-        api.addXP(player, amount);
+
+        boolean ok = api.addXP(target, amount);
+        if (!ok) {
+            sender.sendMessage("§cXP eklenemedi — §e" + target.getName()
+                    + " §coyuncusunun verisi henüz yüklenmemiş olabilir.");
+            return;
+        }
+        // Hedef zaten kendi "+XP" mesajını alır; farklı bir gönderene onay ver
+        if (!(sender instanceof Player p) || !p.equals(target)) {
+            sender.sendMessage("§a" + target.getName() + " §7oyuncusuna §e" + amount + " §aXP eklendi.");
+        }
     }
 
     private void handleAddCoin(Player player, String[] args) {
-        Long amount = parseAmount(player, args);
+        if (args.length < 2) {
+            player.sendMessage("§cKullanım: §e/bixiscore addcoin <miktar>");
+            return;
+        }
+        Long amount = parseAmount(player, args[1]);
         if (amount == null) {
             return;
         }
@@ -279,20 +338,17 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         player.sendMessage("§aVerin sıfırlandı. §7(coin, xp, level, streak)");
     }
 
-    private Long parseAmount(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage("§cKullanım: §e/bixiscore " + args[0].toLowerCase() + " <miktar>");
-            return null;
-        }
+    /** Pozitif long ayrıştırır; hatalıysa gönderene Türkçe hata verir ve {@code null} döner. */
+    private Long parseAmount(CommandSender sender, String raw) {
         try {
-            long amount = Long.parseLong(args[1]);
+            long amount = Long.parseLong(raw.trim());
             if (amount <= 0) {
-                player.sendMessage("§cMiktar 0'dan büyük olmalı.");
+                sender.sendMessage("§cMiktar 0'dan büyük olmalı.");
                 return null;
             }
             return amount;
         } catch (NumberFormatException ex) {
-            player.sendMessage("§cGeçersiz sayı: §e" + args[1]);
+            sender.sendMessage("§cGeçersiz sayı: §e" + raw);
             return null;
         }
     }
