@@ -1,6 +1,6 @@
 name: BixisCore
 main: com.yeditepemc.bixiscore.BixisCorePlugin
-version: 1.0.1-SNAPSHOT
+version: 1.1.0
 api-version: '1.21'
 authors: [iBerkS]
 description: YeditepeMC ağı için merkezi veri ve API kütüphanesi.
@@ -18,11 +18,11 @@ commands:
     description: Level ilerleme ve ödül GUI'sini açar
     usage: /level
     permission: bixiscore.level
-  # NOT: info/addcoin/reset GEÇİCİ TEST amaçlıdır; "addxp <oyuncu> <miktar>" ise
-  # KALICIDIR (SkyWarsReloaded konsoldan XP ödülü için çağırır).
+  # NOT: info/reset GEÇİCİ TEST amaçlıdır; "addxp/addcoin <oyuncu> <miktar>" ise
+  # KALICIDIR (SkyWarsReloaded konsoldan XP/coin ödülü için çağırır).
   bixiscore:
-    description: BixisCore komutu (addxp konsoldan, diğerleri test)
-    usage: /bixiscore addxp <oyuncu> <miktar>
+    description: BixisCore komutu (addxp/addcoin konsoldan, diğerleri test)
+    usage: /bixiscore addxp|addcoin <oyuncu> <miktar>
     permission: bixiscore.admin
 
 permissions:

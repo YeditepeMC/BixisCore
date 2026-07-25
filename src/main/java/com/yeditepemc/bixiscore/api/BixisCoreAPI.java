@@ -103,7 +103,7 @@ public class BixisCoreAPI {
             player.sendMessage("§cCoin eklenirken bir hata oluştu.");
             return false;
         }
-        player.sendMessage("§a+§e" + amount + " coin §ahesabına eklendi!");
+        player.sendMessage("§a+§e" + amount + "₺ §akazandın!");
         return true;
     }
 

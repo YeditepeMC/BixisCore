@@ -206,21 +206,25 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
 
         String sub = args[0].toLowerCase();
 
-        // addxp konsoldan da çalışır: /bixiscore addxp <oyuncu> <miktar>
+        // addxp / addcoin konsoldan da çalışır (hedef oyuncu belirtilir)
+        // — SkyWarsReloaded bunları konsoldan tetikler
         if (sub.equals("addxp")) {
             handleAddXp(sender, args);
+            return true;
+        }
+        if (sub.equals("addcoin")) {
+            handleAddCoin(sender, args);
             return true;
         }
 
         // Diğer (geçici test) alt komutları yalnızca oyuncu kendisi için kullanır
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cBu alt komut yalnızca oyunculara özeldir. "
-                    + "Konsoldan: §e/bixiscore addxp <oyuncu> <miktar>");
+            sender.sendMessage("§cBu alt komut yalnızca oyunculara özeldir. Konsoldan: "
+                    + "§e/bixiscore addxp|addcoin <oyuncu> <miktar>");
             return true;
         }
         switch (sub) {
             case "info" -> handleInfo(player);
-            case "addcoin" -> handleAddCoin(player, args);
             case "reset" -> handleReset(player);
             default -> sendUsage(player);
         }
@@ -230,6 +234,7 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
     private void sendUsage(CommandSender sender) {
         sender.sendMessage("§6BixisCore komutları:");
         sender.sendMessage("§e/bixiscore addxp <oyuncu> <miktar> §7- oyuncuya XP ekle (konsol/admin)");
+        sender.sendMessage("§e/bixiscore addcoin <oyuncu> <miktar> §7- oyuncuya coin ekle (konsol/admin)");
         sender.sendMessage("§8— geçici test alt komutları (oyuncu) —");
         sender.sendMessage("§e/bixiscore info §7- coin, xp, level, streak bilgin");
         sender.sendMessage("§e/bixiscore addxp <miktar> §7- kendine XP ekle");
@@ -303,16 +308,55 @@ public final class BixisCorePlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private void handleAddCoin(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage("§cKullanım: §e/bixiscore addcoin <miktar>");
+    /**
+     * İki biçimi destekler (addxp ile aynı desen):
+     * <ul>
+     *   <li>{@code /bixiscore addcoin <miktar>} — gönderen oyuncu kendine ekler</li>
+     *   <li>{@code /bixiscore addcoin <oyuncu> <miktar>} — konsol/admin, hedefe ekler
+     *       (SkyWarsReloaded winCommands/killCommands buradan tetikler)</li>
+     * </ul>
+     * Coin, {@link BixisCoreAPI#addCoins} üzerinden Vault'a (XConomy) yazılır; oyuncuya
+     * gösterilen mesaj BixisCore kontrolünde ve Türkçedir ("+X coin kazandın!").
+     */
+    private void handleAddCoin(CommandSender sender, String[] args) {
+        Player target;
+        Long amount;
+
+        if (args.length >= 3) {
+            // Hedefli biçim — konsoldan çalışır
+            target = getServer().getPlayerExact(args[1]);
+            if (target == null) {
+                sender.sendMessage("§cOyuncu bulunamadı ya da çevrimiçi değil: §e" + args[1]);
+                return;
+            }
+            amount = parseAmount(sender, args[2]);
+        } else if (args.length == 2) {
+            // Kendine ekleme — yalnızca oyuncu
+            if (!(sender instanceof Player self)) {
+                sender.sendMessage("§cKonsoldan kullanım: §e/bixiscore addcoin <oyuncu> <miktar>");
+                return;
+            }
+            target = self;
+            amount = parseAmount(sender, args[1]);
+        } else {
+            sender.sendMessage("§cKullanım: §e/bixiscore addcoin <oyuncu> <miktar>");
             return;
         }
-        Long amount = parseAmount(player, args[1]);
+
         if (amount == null) {
             return;
         }
-        api.addCoins(player, amount);
+
+        boolean ok = api.addCoins(target, amount);
+        if (!ok) {
+            sender.sendMessage("§cCoin eklenemedi — §e" + target.getName()
+                    + " §c(ekonomi sistemi kullanılamıyor olabilir).");
+            return;
+        }
+        // Hedef zaten kendi "+₺" mesajını alır; farklı bir gönderene onay ver
+        if (!(sender instanceof Player p) || !p.equals(target)) {
+            sender.sendMessage("§a" + target.getName() + " §7oyuncusuna §e" + amount + "₺ §aeklendi.");
+        }
     }
 
     private void handleReset(Player player) {
