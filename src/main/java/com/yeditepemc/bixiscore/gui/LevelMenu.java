@@ -26,8 +26,8 @@ import java.util.Set;
  */
 public class LevelMenu {
 
-    // ---- Ana ekran slotları (36) ----
-    static final int MAIN_SIZE = 36;
+    // ---- Ana ekran slotları (45 = 5 satır) ----
+    static final int MAIN_SIZE = 45;
     static final int MAIN_PROGRESS = 11;
     static final int MAIN_SUMMARY = 13;
     static final int MAIN_MILESTONE = 15;
@@ -73,7 +73,8 @@ public class LevelMenu {
             return;
         }
         Inventory inv = create(LevelMenuHolder.Type.MAIN, MAIN_SIZE, "&1&lLevel İlerlemen");
-        fill(inv, Material.BLACK_STAINED_GLASS_PANE);
+        // TEK renk dolgu — tüm boş slotlar (5. satır 36-44 dahil) gri cam
+        fill(inv, Material.GRAY_STAINED_GLASS_PANE);
 
         int level = data.getLevel();
         boolean capped = level >= PlayerData.MAX_LEVEL;
@@ -159,8 +160,10 @@ public class LevelMenu {
         }
 
         inv.setItem(CAL_SUMMARY, summaryHead(player, data));
-        inv.setItem(51, TextUtil.item(Material.GRAY_STAINED_GLASS_PANE, " "));
-        inv.setItem(52, TextUtil.item(Material.GRAY_STAINED_GLASS_PANE, " "));
+        // Dolgu slotları — level taşımaz; BARRIER (kilitli) / COMPASS (mevcut) ile
+        // karışmasın diye koyu cam kullanılır
+        inv.setItem(51, TextUtil.item(Material.BLACK_STAINED_GLASS_PANE, " "));
+        inv.setItem(52, TextUtil.item(Material.BLACK_STAINED_GLASS_PANE, " "));
         inv.setItem(CAL_BACK, TextUtil.item(Material.ARROW, "&e« Ana ekrana dön"));
 
         player.openInventory(inv);
@@ -182,15 +185,15 @@ public class LevelMenu {
         Material material;
         String name;
         if (!reached && !current) {
-            // Henüz ulaşılmamış
-            material = Material.GRAY_STAINED_GLASS_PANE;
+            // Henüz ulaşılmamış — ağ genelinde "kilitli/yakında" anlamı BARRIER
+            material = Material.BARRIER;
             name = "&7Level " + level + " &8(kilitli)";
             lore.addAll(rewardLines(reward, true));
             lore.add("");
             lore.add("&cBu leveli henüz açmadın!");
         } else if (current) {
-            // Şu anki level — bilgi amaçlı
-            material = Material.LIME_STAINED_GLASS_PANE;
+            // Şu anki level — "şu an buradasın" anlamı COMPASS (spawn item'ıyla aynı dil)
+            material = Material.COMPASS;
             name = "&a&lLevel " + level + " &7(şu an buradasın)";
             lore.addAll(rewardLines(reward, false));
             lore.add("");
@@ -313,8 +316,9 @@ public class LevelMenu {
         return inv;
     }
 
-    private void fill(Inventory inv, Material filler) {
-        ItemStack pane = TextUtil.item(filler, " ");
+    /** Envanterin tüm slotlarını tek bir materyalle doldurur (item'lar sonra üzerine yazılır). */
+    private void fill(Inventory inv, Material material) {
+        ItemStack pane = TextUtil.item(material, " ");
         for (int i = 0; i < inv.getSize(); i++) {
             inv.setItem(i, pane);
         }
